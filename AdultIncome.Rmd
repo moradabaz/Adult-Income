@@ -636,3 +636,172 @@ chisq.test(table(adult.data$sex, adult.data$income))
 ## Variables de tipo numérico
 
 
+### Edad 
+
+```{r}
+summary(adult.data$age)
+```
+
+
+
+```{r}
+ggplot(adult.data) + aes(x=as.numeric(age), group=income, fill=income) + 
+  geom_histogram(binwidth=1, color='black') 
+```
+
+Edad y genero
+
+```{r}
+spineplot(table(adult.data$age, adult.data$sex), col = c("pink", "blue"))
+```
+
+
+```{r}
+ggplot(adult.data) + aes(x=as.numeric(age), group=sex, fill=sex) + 
+  geom_histogram(binwidth=1, color='black') + theme_bw() + theme_update() 
+```
+
+
+### Capital Gain
+
+```{r}
+summary(adult.data$capital_gain)
+```
+
+```{r}
+# histogram of capital_gain
+ggplot(adult.data) + aes(x=as.numeric(capital_gain), group=income, fill=income) + 
+  geom_histogram(bins=5) + ggtitle('Histogram of Capital Gain')
+```
+
+
+```{r}
+# histogram of capital_gain
+ggplot(adult.data) + aes(x=as.numeric(capital_loss), group=income, fill=income) + 
+  geom_histogram(bins=10) + ggtitle('Histogram of Capital Loss')
+```
+
+
+### Horas por Semana
+
+```{r}
+summary(adult.data$hours_per_week)
+```
+
+```{r}
+barplot(table(adult.data$hours_per_week))
+```
+
+
+```{r}
+# histogram of capital_gain
+ggplot(adult.data) + aes(x=as.numeric(hours_per_week), group=income, fill=income) + 
+  geom_histogram(bins=10, color='black') + ggtitle('Histogram of Hours per week')
+```
+
+
+# Análisis Multivariable
+
+```{r}
+train.data$race <- NULL
+train.data$sex <- NULL
+str(train.data)
+```
+
+```{r}
+adult.data$fnlwgt <- NULL
+adult.data$race <- NULL
+adult.data$sex <- NULL
+adult.data$educatoin <- NULL
+sz <- round(.8 * dim(adult.data)[1])  # training set size
+training_set <- adult.data[1:sz,]
+testing_set <- adult.data[-(1:sz),]
+```
+
+
+```{r}
+str(training_set)
+```
+
+## Correlaciones
+
+```{r}
+train.num.data <- training_set
+train.num.data$workclass <- NULL
+train.num.data$educatoin <- NULL
+train.num.data$marital_status <- NULL
+train.num.data$occupation <- NULL
+train.num.data$relationship <- NULL
+train.num.data$native_country <- NULL
+train.num.data$income <- NULL
+str(train.num.data)
+```
+
+```{r}
+cor(train.num.data[,])
+```
+
+
+```{r}
+corrplot::corrplot(cor(train.num.data[,]))
+```
+
+Vemos que las variables están poco correlacionas, lo cual es bueno. 
+
+
+## Regresión Logística
+
+```{r}
+m1 <- glm(income ~ ., data = training_set, family = binomial('logit'))
+summary(m1)
+```
+
+
+
+```{r}
+conf <- confint(m1, na.rm = TRUE)
+```
+
+
+```{r}
+m_full <- m1  # full model is the model just fitted
+m_null <- glm(income ~ 1, data = training_set, family = binomial('logit'))
+```
+
+
+
+```{r}
+step(m_full, trace = F, scope = list(lower=formula(m_null), upper=formula(m_full)),
+     direction = 'backward')
+
+```
+
+
+```{r}
+step(m_full, trace = F, scope = list(lower=formula(m_null), upper=formula(m_full)),
+     direction = 'forward')
+```
+
+Los resultados son iguales. 
+
+```{r}
+prob <- predict(m1, testing_set, type = 'response')
+pred <- rep('<=50K', length(prob))
+pred[prob>=.5] <- '>50K'
+# confusion matrix 
+tb <- table(pred, testing_set$income)
+tb
+```
+
+
+```{r}
+sum(tb)
+pct.accuracy = ((tb[1,1] + tb[1,2])/sum(tb))*100
+pct.accuracy
+```
+
+Tiene una predicción de mas del 80%.
+
+
+
+# Tecnicas de entrenamiento y aprendizaje
